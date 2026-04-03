@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'main.dart';
 
-// --- 1. MODÈLES ---
+// --- 1. MODÈLES DE DONNÉES TRANSPORT ---
+
 class Truck {
   String plateNumber, driverName, driverPhone;
   Truck({required this.plateNumber, required this.driverName, required this.driverPhone});
@@ -68,26 +70,27 @@ class _TransportModuleState extends State<TransportModule> with SingleTickerProv
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     double totalProfit = globalTrips.fold(0.0, (sum, t) => sum + t.netProfit);
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(50),
         child: TabBar(
           controller: _tabController,
-          tabs: const [Tab(icon: Icon(Icons.route), text: "Voyages"), Tab(icon: Icon(Icons.local_shipping), text: "Nos Camions")],
+          tabs: const [
+            Tab(icon: Icon(Icons.route), text: "Voyages"),
+            Tab(icon: Icon(Icons.local_shipping), text: "Nos Camions")
+          ],
           labelColor: const Color(0xFF1A237E),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildTripsTab(totalProfit), _buildTrucksTab()],
+        children: [
+          _buildTripsTab(totalProfit),
+          _buildTrucksTab(),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF1A237E),
@@ -104,7 +107,7 @@ class _TransportModuleState extends State<TransportModule> with SingleTickerProv
         width: double.infinity, padding: const EdgeInsets.all(16), margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(color: Colors.indigo.shade900, borderRadius: BorderRadius.circular(12)),
         child: Column(children: [
-          const Text("BÉNÉFICE GLOBAL TRANSPORT", style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const Text("BÉNÉFICE TOTAL TRANSPORT", style: TextStyle(color: Colors.white70, fontSize: 12)),
           Text(formatPrice(profit), style: const TextStyle(color: Colors.greenAccent, fontSize: 22, fontWeight: FontWeight.bold)),
         ]),
       ),
@@ -117,7 +120,7 @@ class _TransportModuleState extends State<TransportModule> with SingleTickerProv
             child: ListTile(
               leading: Icon(Icons.circle, color: trip.isFinished ? Colors.green : Colors.orange, size: 12),
               title: Text(trip.mainAxis, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("${trip.truck.plateNumber} • ${trip.prestations.length} prestation(s)"),
+              subtitle: Text("${trip.truck.driverName} • ${trip.prestations.length} prestation(s)"),
               trailing: Text(formatPrice(trip.netProfit), style: TextStyle(color: trip.netProfit >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => TripDetailScreen(trip: trip))).then((_) => setState(() {})),
             ),
@@ -170,7 +173,7 @@ class _TransportModuleState extends State<TransportModule> with SingleTickerProv
         DropdownButtonFormField<Tiers>(decoration: const InputDecoration(labelText: "Client"), items: globalTiers.where((t)=>t.isClient).map((t) => DropdownMenuItem(value: t, child: Text(t.compteTiers))).toList(), onChanged: (v) => selC = v),
         DropdownButtonFormField<Truck>(decoration: const InputDecoration(labelText: "Camion"), items: globalTrucks.map((t) => DropdownMenuItem(value: t, child: Text(t.plateNumber))).toList(), onChanged: (v) => selT = v),
         TextField(controller: axe, decoration: const InputDecoration(labelText: "Axe")),
-        TextField(controller: prix, decoration: const InputDecoration(labelText: "Prix"), keyboardType: TextInputType.number, inputFormatters: [ThousandsSeparatorInputFormatter()], onTap: () => {if(prix.text == "0") prix.clear()}),
+        TextField(controller: prix, decoration: const InputDecoration(labelText: "Prix"), keyboardType: TextInputType.number, inputFormatters: [ThousandsSeparatorInputFormatter()], onTap: () { if(prix.text == "0") prix.clear(); }),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("Annuler")), ElevatedButton(onPressed: () {
         if (selC != null && selT != null) {
@@ -181,7 +184,7 @@ class _TransportModuleState extends State<TransportModule> with SingleTickerProv
   }
 }
 
-// --- 4. HISTORIQUE CAMION ---
+// --- 4. ÉCRAN HISTORIQUE CAMION + PDF ---
 class TruckHistoryScreen extends StatefulWidget {
   final Truck truck;
   const TruckHistoryScreen({super.key, required this.truck});
@@ -237,7 +240,7 @@ class _TruckHistoryScreenState extends State<TruckHistoryScreen> {
   }
 }
 
-// --- 5. DÉTAIL VOYAGE ---
+// --- 5. DÉTAIL VOYAGE AVEC MODIFICATION COMPLÈTE ---
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
   const TripDetailScreen({super.key, required this.trip});
@@ -248,7 +251,18 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Suivi : ${widget.trip.truck.plateNumber}"), backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
+      appBar: AppBar(
+        title: Text("Suivi : ${widget.trip.truck.plateNumber}"),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+        actions: [
+          if (!widget.trip.isFinished)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _showEditTripDialog,
+            )
+        ],
+      ),
       body: Column(children: [
         Container(padding: const EdgeInsets.all(20), color: Colors.indigo.shade50, child: Column(children: [
           _rowS("Revenus", formatPrice(widget.trip.totalRevenue)),
@@ -257,11 +271,30 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           _rowS("BÉNÉFICE NET", formatPrice(widget.trip.netProfit), bold: true, green: widget.trip.netProfit >= 0),
         ])),
         Expanded(child: SingleChildScrollView(child: Column(children: [
-          const Padding(padding: EdgeInsets.all(8), child: Text("PRESTATIONS", style: TextStyle(fontWeight: FontWeight.bold))),
-          ListView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: widget.trip.prestations.length, itemBuilder: (c, i) => ListTile(dense: true, title: Text(widget.trip.prestations[i].axis), subtitle: Text(widget.trip.prestations[i].client.compteTiers), trailing: Text(formatPrice(widget.trip.prestations[i].price)))),
+          const Padding(padding: EdgeInsets.all(8), child: Text("PRESTATIONS / CHARGEMENTS", style: TextStyle(fontWeight: FontWeight.bold))),
+          ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: widget.trip.prestations.length,
+              itemBuilder: (c, i) => ListTile(
+                dense: true,
+                title: Text(widget.trip.prestations[i].axis),
+                subtitle: Text(widget.trip.prestations[i].client.compteTiers),
+                trailing: Text(formatPrice(widget.trip.prestations[i].price)),
+              )
+          ),
           const Divider(),
-          const Padding(padding: EdgeInsets.all(8), child: Text("DÉPENSES", style: TextStyle(fontWeight: FontWeight.bold))),
-          ListView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: widget.trip.expenses.length, itemBuilder: (c, i) => ListTile(dense: true, title: Text(widget.trip.expenses[i].label), trailing: Text(formatPrice(widget.trip.expenses[i].amount), style: const TextStyle(color: Colors.red)))),
+          const Padding(padding: EdgeInsets.all(8), child: Text("DÉPENSES DU VOYAGE", style: TextStyle(fontWeight: FontWeight.bold))),
+          ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: widget.trip.expenses.length,
+              itemBuilder: (c, i) => ListTile(
+                  dense: true,
+                  title: Text(widget.trip.expenses[i].label),
+                  trailing: Text(formatPrice(widget.trip.expenses[i].amount), style: const TextStyle(color: Colors.red))
+              )
+          ),
         ]))),
       ]),
       bottomNavigationBar: Container(
@@ -274,7 +307,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ]),
           if (!widget.trip.isFinished) const SizedBox(height: 8),
           if (!widget.trip.isFinished)
-          // --- BOUTON CLÔTURER EN VERT ---
             _roundedButton("CLÔTURER LE VOYAGE (RETOUR)", () {
               setState(() { widget.trip.isFinished = true; widget.trip.returnDate = DateTime.now(); });
               Navigator.pop(context);
@@ -282,6 +314,100 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           else
             Container(padding: const EdgeInsets.all(8), width: double.infinity, color: Colors.grey.shade200, child: Text("Voyage terminé le ${DateFormat('dd/MM/yy HH:mm').format(widget.trip.returnDate!)}", textAlign: TextAlign.center)),
         ])),
+      ),
+    );
+  }
+
+  // --- LOGIQUE DE MODIFICATION GLOBALE (Prestations ET Dépenses) ---
+  void _showEditTripDialog() {
+    Truck? tempTruck = widget.trip.truck;
+
+    // Contrôleurs pour les prestations
+    List<TextEditingController> axisControllers = widget.trip.prestations.map((p) => TextEditingController(text: p.axis)).toList();
+    List<TextEditingController> priceControllers = widget.trip.prestations.map((p) => TextEditingController(text: p.price.toString().replaceAll('.0', ''))).toList();
+    List<Tiers?> selectedClients = widget.trip.prestations.map((p) => p.client).toList();
+
+    // Contrôleurs pour les dépenses (MOTIFS ET MONTANTS)
+    List<TextEditingController> expLabelControllers = widget.trip.expenses.map((e) => TextEditingController(text: e.label)).toList();
+    List<TextEditingController> expAmountControllers = widget.trip.expenses.map((e) => TextEditingController(text: e.amount.toString().replaceAll('.0', ''))).toList();
+
+    showDialog(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text("Modifier Voyage"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<Truck>(
+                    value: tempTruck,
+                    decoration: const InputDecoration(labelText: "Camion"),
+                    items: globalTrucks.map((t) => DropdownMenuItem(value: t, child: Text(t.plateNumber))).toList(),
+                    onChanged: (v) => setS(() => tempTruck = v),
+                  ),
+                  const Divider(height: 30),
+                  const Text("MODIFIER LES CHARGEMENTS", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue)),
+                  ...List.generate(widget.trip.prestations.length, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(children: [
+                        DropdownButtonFormField<Tiers>(
+                          value: selectedClients[index],
+                          decoration: const InputDecoration(labelText: "Client"),
+                          items: globalTiers.where((t) => t.isClient).map((t) => DropdownMenuItem(value: t, child: Text(t.compteTiers))).toList(),
+                          onChanged: (v) => setS(() => selectedClients[index] = v),
+                        ),
+                        TextField(controller: axisControllers[index], decoration: const InputDecoration(labelText: "Axe")),
+                        TextField(controller: priceControllers[index], decoration: const InputDecoration(labelText: "Prix"), keyboardType: TextInputType.number, inputFormatters: [ThousandsSeparatorInputFormatter()]),
+                        const Divider(),
+                      ]),
+                    );
+                  }),
+                  const SizedBox(height: 10),
+                  const Text("MODIFIER LES DÉPENSES", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red)),
+                  ...List.generate(widget.trip.expenses.length, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(children: [
+                        Expanded(child: TextField(controller: expLabelControllers[index], decoration: const InputDecoration(labelText: "Motif"))),
+                        const SizedBox(width: 8),
+                        Expanded(child: TextField(controller: expAmountControllers[index], decoration: const InputDecoration(labelText: "Montant"), keyboardType: TextInputType.number, inputFormatters: [ThousandsSeparatorInputFormatter()])),
+                      ]),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text("Annuler")),
+            ElevatedButton(
+              onPressed: () {
+                if (tempTruck != null) {
+                  setState(() {
+                    widget.trip.truck = tempTruck!;
+                    // Update Prestations
+                    for (int i = 0; i < widget.trip.prestations.length; i++) {
+                      widget.trip.prestations[i].axis = axisControllers[i].text;
+                      widget.trip.prestations[i].client = selectedClients[i]!;
+                      widget.trip.prestations[i].price = double.tryParse(priceControllers[i].text.replaceAll(' ', '')) ?? 0;
+                    }
+                    // Update Expenses (Motifs et Montants)
+                    for (int i = 0; i < widget.trip.expenses.length; i++) {
+                      widget.trip.expenses[i].label = expLabelControllers[i].text;
+                      widget.trip.expenses[i].amount = double.tryParse(expAmountControllers[i].text.replaceAll(' ', '')) ?? 0;
+                    }
+                  });
+                  Navigator.pop(c);
+                }
+              },
+              child: const Text("Enregistrer"),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -296,14 +422,13 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     showDialog(context: context, builder: (c) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(title: const Text("Nouvelle Prestation"), content: Column(mainAxisSize: MainAxisSize.min, children: [
       DropdownButtonFormField<Tiers>(decoration: const InputDecoration(labelText: "Client"), items: globalTiers.where((t)=>t.isClient).map((t)=>DropdownMenuItem(value: t, child: Text(t.compteTiers))).toList(), onChanged: (v)=>selC=v),
       TextField(controller: axe, decoration: const InputDecoration(labelText: "Axe")),
-      TextField(controller: px, decoration: const InputDecoration(labelText: "Prix"), keyboardType: TextInputType.number),
+      TextField(controller: px, decoration: const InputDecoration(labelText: "Prix"), keyboardType: TextInputType.number, inputFormatters: [ThousandsSeparatorInputFormatter()]),
     ]), actions: [TextButton(onPressed: ()=>Navigator.pop(c), child: const Text("Annuler")), ElevatedButton(onPressed: (){ if(selC != null){ setState((){ widget.trip.prestations.add(Prestation(axis: axe.text, client: selC!, price: double.tryParse(px.text.replaceAll(' ', '')) ?? 0)); Navigator.pop(c); }); } }, child: const Text("Ajouter"))])));
   }
 
   Widget _rowS(String l, String v, {bool bold = false, bool red = false, bool green = false}) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)), Text(v, style: TextStyle(fontWeight: FontWeight.bold, color: red ? Colors.red : (green ? Colors.green : Colors.black)))]);
 }
 
-// --- WIDGET BOUTON ---
 Widget _roundedButton(String label, VoidCallback onTap, {bool isFullWidth = false, Color color = const Color(0xFF1A237E)}) {
   return SizedBox(width: isFullWidth ? double.infinity : null, child: ElevatedButton(onPressed: onTap, style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)), child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))));
 }
