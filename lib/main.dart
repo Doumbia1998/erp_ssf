@@ -9,6 +9,79 @@ import 'transport_module.dart';
 
 void main() => runApp(const SSFApp());
 
+// --- CONFIGURATION ---
+class SSFApp extends StatelessWidget {
+  const SSFApp({super.key});
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'SSF VENTE',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
+      useMaterial3: true,
+    ),
+    home: const LoginScreen(),
+  );
+}
+
+// --- DESIGN CONNEXION (CLONE IMAGE) ---
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+  @override State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _user = TextEditingController();
+  final _pass = TextEditingController();
+  bool _hide = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity, height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF1976D2), Color(0xFF1565C0)]),
+        ),
+        child: SingleChildScrollView(
+          child: Column(children: [
+            const SizedBox(height: 80),
+            Container(
+              height: 150, width: 150,
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)]),
+              child: Padding(padding: const EdgeInsets.all(20), child: Image.asset('assets/logo_ssf.png', errorBuilder: (c, e, s) => const Icon(Icons.business, size: 80, color: Color(0xFF1565C0)))),
+            ),
+            const SizedBox(height: 30),
+            const Text("SSF VENTE", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+            const Text("Connectez-vous pour continuer", style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25),
+              child: Container(
+                padding: const EdgeInsets.all(25),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+                child: Column(children: [
+                  TextField(controller: _user, decoration: InputDecoration(hintText: "Email Utilisateur", prefixIcon: const Icon(Icons.email_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)))),
+                  const SizedBox(height: 20),
+                  TextField(controller: _pass, obscureText: _hide, decoration: InputDecoration(hintText: "Mot de passe", prefixIcon: const Icon(Icons.lock_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), suffixIcon: IconButton(icon: Icon(_hide ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _hide = !_hide)))),
+                  const SizedBox(height: 30),
+                  SizedBox(width: double.infinity, height: 55, child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1976D2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                    onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const MainNavigation())),
+                    child: const Text("SE CONNECTER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  )),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 60),
+            const Text("Développé par MLD Consulting Sarl", style: TextStyle(color: Colors.white60, fontSize: 12)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 // --- UTILITAIRES ---
 String formatPrice(double price) => NumberFormat('#,###', 'fr_FR').format(price).replaceAll(',', ' ') + " FCFA";
 
@@ -60,14 +133,8 @@ class Invoice {
   DateTime date;
   Tiers client;
   List<InvoiceLine> lignes;
-  double acompte;
-  double fraisTransport;
-
-  Invoice({
-    required this.numero, required this.date, required this.client, required this.lignes,
-    this.acompte = 0, this.fraisTransport = 0, this.modePaiement = "Espèces", this.motifPaiement = ""
-  });
-
+  double acompte, fraisTransport;
+  Invoice({required this.numero, required this.date, required this.client, required this.lignes, this.acompte = 0, this.fraisTransport = 0, this.modePaiement = "Espèces", this.motifPaiement = ""});
   double get totalHT => lignes.fold(0.0, (sum, item) => sum + item.montantHT);
   double get netAPayer => totalHT - acompte - fraisTransport;
 }
@@ -92,16 +159,7 @@ List<Invoice> globalPurchases = [];
 List<Payment> globalPayments = [];
 List<String> globalDepots = [];
 
-// --- 3. UI PRINCIPALE ---
-class SSFApp extends StatelessWidget {
-  const SSFApp({super.key});
-  @override Widget build(BuildContext context) => MaterialApp(
-    title: 'VENTES', debugShowCheckedModeBanner: false,
-    theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A237E)), useMaterial3: true),
-    home: const MainNavigation(),
-  );
-}
-
+// --- 3. NAVIGATION ---
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
   @override State<MainNavigation> createState() => _MainNavigationState();
@@ -120,10 +178,7 @@ class _MainNavigationState extends State<MainNavigation> {
           value: isTransportMode ? "Transport" : "Ventes",
           dropdownColor: const Color(0xFF1A237E), underline: const SizedBox(),
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          items: const [
-            DropdownMenuItem(value: "Ventes", child: Text("SSF VENTE")),
-            DropdownMenuItem(value: "Transport", child: Text("TRANSPORT")),
-          ],
+          items: const [DropdownMenuItem(value: "Ventes", child: Text("SSF VENTE")), DropdownMenuItem(value: "Transport", child: Text("TRANSPORT"))],
           onChanged: (val) => setState(() => isTransportMode = val == "Transport"),
         ),
         const SizedBox(width: 10),
@@ -139,6 +194,8 @@ class _MainNavigationState extends State<MainNavigation> {
       _drawerItem(Icons.assignment, "Documents des Ventes"),
       _drawerItem(Icons.shopping_cart, "Documents des Achats"),
       _drawerItem(Icons.payments, "Règlements Clients"),
+      const Divider(),
+      ListTile(leading: const Icon(Icons.logout, color: Colors.red), title: const Text("Déconnexion"), onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const LoginScreen()))),
     ])),
     body: isTransportMode ? TransportModule() : _buildBody(),
   );
@@ -156,85 +213,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 }
 
-// --- 4. MODULE : RAPPORT DES RÈGLEMENTS (AVEC PDF) ---
-class PaymentsReportModule extends StatefulWidget {
-  const PaymentsReportModule({super.key});
-  @override State<PaymentsReportModule> createState() => _PaymentsReportModuleState();
-}
-
-class _PaymentsReportModuleState extends State<PaymentsReportModule> {
-  DateTimeRange? selectedRange;
-
-  @override Widget build(BuildContext context) {
-    List<Payment> filtered = globalPayments;
-    if (selectedRange != null) {
-      filtered = globalPayments.where((p) =>
-      p.date.isAfter(selectedRange!.start.subtract(const Duration(days: 1))) &&
-          p.date.isBefore(selectedRange!.end.add(const Duration(days: 1)))
-      ).toList();
-    }
-
-    double total = filtered.fold(0.0, (sum, p) => sum + p.montant);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text("Règlements Clients"), automaticallyImplyLeading: false, actions: [
-        IconButton(icon: const Icon(Icons.calendar_month), onPressed: () async {
-          final range = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime(2100), initialDateRange: selectedRange);
-          if (range != null) setState(() => selectedRange = range);
-        }),
-        IconButton(icon: const Icon(Icons.picture_as_pdf), onPressed: () => _printPaymentsReport(context, filtered)),
-      ]),
-      body: Column(children: [
-        Container(
-          width: double.infinity, margin: const EdgeInsets.all(10), padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(color: Colors.green.shade700, borderRadius: BorderRadius.circular(12)),
-          child: Column(children: [
-            Text(selectedRange == null ? "TOTAL ENCAISSÉ (HISTORIQUE GLOBAL)" : "ENCAISSÉ DU ${DateFormat('dd/MM/yy').format(selectedRange!.start)} AU ${DateFormat('dd/MM/yy').format(selectedRange!.end)}",
-                style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-            Text(formatPrice(total), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-          ]),
-        ),
-        if (selectedRange != null) TextButton(onPressed: () => setState(() => selectedRange = null), child: const Text("Réinitialiser le filtre")),
-        Expanded(child: filtered.isEmpty ? const Center(child: Text("Aucun règlement trouvé")) : ListView.builder(
-          itemCount: filtered.length,
-          itemBuilder: (c, i) => ListTile(
-            leading: const Icon(Icons.payment, color: Colors.green),
-            title: Text(filtered[i].clientTiers),
-            subtitle: Text("${DateFormat('dd/MM/yyyy').format(filtered[i].date)} - ${filtered[i].mode}"),
-            trailing: Text(formatPrice(filtered[i].montant), style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ))
-      ]),
-    );
-  }
-
-  Future<void> _printPaymentsReport(BuildContext context, List<Payment> payments) async {
-    final pdf = pw.Document();
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    final periodLabel = selectedRange == null ? "Toute la période" : "Période du ${dateFormat.format(selectedRange!.start)} au ${dateFormat.format(selectedRange!.end)}";
-
-    pdf.addPage(pw.MultiPage(pageFormat: PdfPageFormat.a4, build: (pw.Context context) => [
-      pw.Header(level: 0, child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-        pw.Text("RAPPORT DES ENCAISSEMENTS", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.Text("SSF VENTE", style: pw.TextStyle(fontSize: 14, color: PdfColors.blue900)),
-      ])),
-      pw.SizedBox(height: 10),
-      pw.Text("Période : $periodLabel", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-      pw.SizedBox(height: 20),
-      pw.TableHelper.fromTextArray(
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-        headers: ['Date', 'Client', 'Mode', 'Montant'],
-        data: payments.map((p) => [dateFormat.format(p.date), p.clientTiers, p.mode, formatPrice(p.montant).replaceAll(" FCFA", "")]).toList(),
-      ),
-      pw.SizedBox(height: 20),
-      pw.Container(alignment: pw.Alignment.centerRight, child: pw.Text("TOTAL GÉNÉRAL ENCAISSÉ : ${formatPrice(payments.fold(0.0, (s, p) => s + p.montant))}", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold))),
-    ],
-    ));
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-  }
-}
-
-// --- 5. STRUCTURE MODULE ---
+// --- 4. MODULES ---
 class StructureModule extends StatelessWidget {
   const StructureModule({super.key});
   @override Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
@@ -247,7 +226,7 @@ class StructureModule extends StatelessWidget {
   Widget _card(BuildContext ctx, String t, IconData i, Widget s) => Card(child: ListTile(leading: Icon(i, color: const Color(0xFF1A237E)), title: Text(t), onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (c) => s))));
 }
 
-// --- 6. ARTICLES LIST ---
+// --- 5. ÉCRANS LISTES ---
 class ArticlesListScreen extends StatefulWidget {
   @override State<ArticlesListScreen> createState() => _ArticlesListScreenState();
 }
@@ -274,7 +253,6 @@ class _ArticlesListScreenState extends State<ArticlesListScreen> {
   }
 }
 
-// --- 7. TIERS LIST & DETAIL ---
 class TiersListScreen extends StatefulWidget {
   final bool isClient; TiersListScreen({required this.isClient});
   @override State<TiersListScreen> createState() => _TiersListScreenState();
@@ -286,9 +264,9 @@ class _TiersListScreenState extends State<TiersListScreen> {
     double tA = 0, tP = 0;
     for (var t in list) {
       final invs = (widget.isClient ? globalInvoices : globalPurchases).where((i) => i.client.compteTiers == t.compteTiers);
-      final pays = globalPayments.where((p) => p.clientTiers == t.compteTiers);
+      final paysList = globalPayments.where((p) => p.clientTiers == t.compteTiers);
       tA += invs.fold(0.0, (s, i) => s + (i.totalHT - i.fraisTransport));
-      tP += invs.fold(0.0, (s, i) => s + i.acompte) + pays.fold(0.0, (s, p) => s + p.montant);
+      tP += invs.fold(0.0, (s, i) => s + i.acompte) + paysList.fold(0.0, (s, p) => s + p.montant);
     }
     return Scaffold(appBar: AppBar(title: Text(widget.isClient ? "Clients" : "Fournisseurs")), body: Column(children: [
       Padding(padding: const EdgeInsets.all(8), child: TextField(onChanged: (v) => setState(() => q = v), decoration: const InputDecoration(hintText: "Rechercher...", prefixIcon: Icon(Icons.search)))),
@@ -304,6 +282,25 @@ class _TiersListScreenState extends State<TiersListScreen> {
       ))),
     ]), floatingActionButton: FloatingActionButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => CreateTiersScreen(isClient: widget.isClient))).then((_) => setState(() {})), child: const Icon(Icons.add)));
   }
+}
+
+// --- 6. DÉTAILS PRODUIT ET TIERS ---
+class ProductDetailScreen extends StatelessWidget {
+  final Product product; ProductDetailScreen({required this.product});
+  @override Widget build(BuildContext context) {
+    double tQ = 0, tCA = 0, tC = 0;
+    for (var i in globalInvoices) {
+      for (var l in i.lignes) { if (l.product?.designation == product.designation) { tQ += l.quantite; tCA += l.montantHT; tC += (l.quantite * product.prixAchat); } }
+    }
+    return Scaffold(appBar: AppBar(title: Text(product.designation)), body: Column(children: [
+      Container(width: double.infinity, margin: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFDFF0D8), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green.shade200)), child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
+        _rowDetail("Quantités Vendues", tQ.toStringAsFixed(0)), _rowDetail("Chiffre d'affaires", formatPrice(tCA)), _rowDetail("Marge", formatPrice(tCA - tC)), _rowDetail("Stock Actuel", product.stock.toStringAsFixed(0)),
+      ]))),
+      const Padding(padding: EdgeInsets.all(8), child: Text("HISTORIQUE DES VENTES", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
+      Expanded(child: ListView(children: globalInvoices.where((i) => i.lignes.any((l) => l.product?.designation == product.designation)).map((i) => ListTile(title: Text(i.client.compteTiers), subtitle: Text(DateFormat('dd/MM/yyyy').format(i.date)), trailing: Text(formatPrice(i.totalHT)))).toList())),
+    ]));
+  }
+  Widget _rowDetail(String l, String v) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l), Text(v, style: const TextStyle(fontWeight: FontWeight.bold))]);
 }
 
 class TiersDetailScreen extends StatefulWidget {
@@ -323,7 +320,6 @@ class _TiersDetailScreenState extends State<TiersDetailScreen> {
       Expanded(child: ListView(children: [...invoices.map((i) => ListTile(title: Text("Facture ${i.numero}"), trailing: Text(formatPrice(i.totalHT - i.fraisTransport)))), ...paysList.map((p) => ListTile(title: Text("Règlement (${p.mode})"), subtitle: Text(p.motif), trailing: Text("- ${formatPrice(p.montant)}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))))])),
     ]));
   }
-
   void _showPaymentDialog(BuildContext context) {
     final ctrl = TextEditingController(text: "0"); final mCtrl = TextEditingController(); String mode = "Espèces";
     showDialog(context: context, builder: (c) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(title: const Text("Nouveau Règlement"), content: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -335,26 +331,49 @@ class _TiersDetailScreenState extends State<TiersDetailScreen> {
   Widget _rSummary(String l, String v, {bool red = false}) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l), Text(v, style: TextStyle(fontWeight: FontWeight.bold, color: red ? Colors.red : Colors.black))]);
 }
 
-// --- 8. DÉTAILS PRODUIT ---
-class ProductDetailScreen extends StatelessWidget {
-  final Product product; ProductDetailScreen({required this.product});
+// --- 7. RAPPORTS RÈGLEMENTS ---
+class PaymentsReportModule extends StatefulWidget {
+  const PaymentsReportModule({super.key});
+  @override State<PaymentsReportModule> createState() => _PaymentsReportModuleState();
+}
+class _PaymentsReportModuleState extends State<PaymentsReportModule> {
+  DateTimeRange? selectedRange;
   @override Widget build(BuildContext context) {
-    double tQ = 0, tCA = 0, tC = 0;
-    for (var i in globalInvoices) {
-      for (var l in i.lignes) { if (l.product?.designation == product.designation) { tQ += l.quantite; tCA += l.montantHT; tC += (l.quantite * product.prixAchat); } }
+    List<Payment> filtered = globalPayments;
+    if (selectedRange != null) {
+      filtered = globalPayments.where((p) => p.date.isAfter(selectedRange!.start.subtract(const Duration(days: 1))) && p.date.isBefore(selectedRange!.end.add(const Duration(days: 1)))).toList();
     }
-    return Scaffold(appBar: AppBar(title: Text(product.designation)), body: Column(children: [
-      Container(width: double.infinity, margin: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFDFF0D8), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green.shade200)), child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        _rowDetail("Quantités Vendues", tQ.toStringAsFixed(0)), _rowDetail("Chiffre d'affaires", formatPrice(tCA)), _rowDetail("Marge", formatPrice(tCA - tC)), _rowDetail("Stock Actuel", product.stock.toStringAsFixed(0)),
-      ]))),
-      const Padding(padding: EdgeInsets.all(8), child: Text("HISTORIQUE DES VENTES", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-      Expanded(child: ListView(children: globalInvoices.where((i) => i.lignes.any((l) => l.product?.designation == product.designation)).map((i) => ListTile(title: Text(i.client.compteTiers), subtitle: Text(DateFormat('dd/MM/yyyy').format(i.date)), trailing: Text(formatPrice(i.totalHT)))).toList())),
-    ]));
+    double total = filtered.fold(0.0, (sum, p) => sum + p.montant);
+    return Scaffold(
+      appBar: AppBar(title: const Text("Règlements Clients"), automaticallyImplyLeading: false, actions: [
+        IconButton(icon: const Icon(Icons.calendar_month), onPressed: () async {
+          final range = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime(2100), initialDateRange: selectedRange);
+          if (range != null) setState(() => selectedRange = range);
+        }),
+        IconButton(icon: const Icon(Icons.picture_as_pdf), onPressed: () => _printPaymentsReport(context, filtered)),
+      ]),
+      body: Column(children: [
+        Container(width: double.infinity, margin: const EdgeInsets.all(10), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.green.shade700, borderRadius: BorderRadius.circular(12)), child: Column(children: [
+          Text(selectedRange == null ? "TOTAL ENCAISSÉ (TOUT)" : "ENCAISSÉ SUR LA PÉRIODE", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(formatPrice(total), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+        ])),
+        Expanded(child: filtered.isEmpty ? const Center(child: Text("Aucun règlement")) : ListView.builder(itemCount: filtered.length, itemBuilder: (c, i) => ListTile(leading: const Icon(Icons.payment, color: Colors.green), title: Text(filtered[i].clientTiers), subtitle: Text("${DateFormat('dd/MM/yyyy').format(filtered[i].date)} - ${filtered[i].mode}"), trailing: Text(formatPrice(filtered[i].montant), style: const TextStyle(fontWeight: FontWeight.bold))))),
+      ]),
+    );
   }
-  Widget _rowDetail(String l, String v) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l), Text(v, style: const TextStyle(fontWeight: FontWeight.bold))]);
+  Future<void> _printPaymentsReport(BuildContext context, List<Payment> payments) async {
+    final pdf = pw.Document(); final dateFormat = DateFormat('dd/MM/yyyy');
+    pdf.addPage(pw.MultiPage(build: (pw.Context context) => [
+      pw.Header(level: 0, child: pw.Text("RAPPORT DES ENCAISSEMENTS - SSF VENTE")),
+      pw.TableHelper.fromTextArray(headers: ['Date', 'Client', 'Mode', 'Montant'], data: payments.map((p) => [dateFormat.format(p.date), p.clientTiers, p.mode, formatPrice(p.montant)]).toList()),
+      pw.SizedBox(height: 20),
+      pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text("TOTAL : ${formatPrice(payments.fold(0.0, (s, p) => s + p.montant))}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+    ]));
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
 }
 
-// --- 9. DOCUMENTS VENTES & ACHATS ---
+// --- 8. DOCUMENTS VENTES & ACHATS ---
 class SalesDocumentsModule extends StatefulWidget { @override State<SalesDocumentsModule> createState() => _SDMState(); }
 class _SDMState extends State<SalesDocumentsModule> {
   String q = "";
@@ -381,8 +400,8 @@ class _PDMState extends State<PurchaseDocumentsModule> {
   }
 }
 
-// --- 10. SAISIE FACTURE ---
-class CreateInvoiceScreen extends StatefulWidget { final bool isAchat; final Invoice? invoiceToEdit; CreateInvoiceScreen({required this.isAchat, this.invoiceToEdit}); @override State<CreateInvoiceScreen> createState() => _CISState(); }
+// --- 9. SAISIE FACTURE ---
+class CreateInvoiceScreen extends StatefulWidget { final bool isAchat; final Invoice? invoiceToEdit; CreateInvoiceScreen({required this.isAchat, this.invoiceToEdit, super.key}); @override State<CreateInvoiceScreen> createState() => _CISState(); }
 class _CISState extends State<CreateInvoiceScreen> {
   late String s; Tiers? selC; List<InvoiceLine> l = []; late TextEditingController ac, ft; String m = "Espèces";
   @override void initState() {
@@ -401,25 +420,22 @@ class _CISState extends State<CreateInvoiceScreen> {
     TextButton.icon(onPressed: () => setState(() => l.add(InvoiceLine())), icon: const Icon(Icons.add), label: const Text("Ajouter ligne")),
     const Divider(), DropdownButtonFormField<String>(value: m, items: ["Espèces", "Chèque", "Virement", "MobiCash", "Orange Money"].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => m = v!), decoration: const InputDecoration(labelText: "Mode")),
     TextField(controller: ac, decoration: const InputDecoration(labelText: "Acompte Client"), inputFormatters: [ThousandsSeparatorInputFormatter()], keyboardType: TextInputType.number, onTap: () => {if(ac.text=="0") ac.clear()}, onChanged: (v) => setState(() {})),
-    if(!widget.isAchat) TextField(controller: ft, decoration: const InputDecoration(labelText: "Frais Transport (Moins)", prefixIcon: Icon(Icons.local_shipping)), inputFormatters: [ThousandsSeparatorInputFormatter()], keyboardType: TextInputType.number, onTap: () => {if(ft.text=="0") ft.clear()}, onChanged: (v) => setState(() {})),
+    if(!widget.isAchat) TextField(controller: ft, decoration: const InputDecoration(labelText: "Frais Transport (Moto/Tricycle) - Déduit du Net", prefixIcon: Icon(Icons.local_shipping)), inputFormatters: [ThousandsSeparatorInputFormatter()], keyboardType: TextInputType.number, onTap: () => {if(ft.text=="0") ft.clear()}, onChanged: (v) => setState(() {})),
     const SizedBox(height: 20), Align(alignment: Alignment.centerRight, child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
       Text("Total HT Articles : ${formatPrice(totalHT)}"),
+      if(!widget.isAchat) Text("Frais Transport : - ${formatPrice(double.tryParse(ft.text.replaceAll(' ', '')) ?? 0)}", style: const TextStyle(color: Colors.red)),
       Text("NET À PAYER : ${formatPrice(totalHT - (double.tryParse(ac.text.replaceAll(' ', '')) ?? 0) - (double.tryParse(ft.text.replaceAll(' ', '')) ?? 0))}", style: const TextStyle(fontSize: 18, color: Colors.lightBlue, fontWeight: FontWeight.bold)),
     ])),
     const SizedBox(height: 30), _roundedButton("VALIDER", () { if (selC != null) {
       if (!widget.isAchat) {
-        for (var line in l) {
-          if (line.product != null) {
-            double stockDispo = line.product!.stock;
-            if (widget.invoiceToEdit != null) {
-              var ancienneLigne = widget.invoiceToEdit!.lignes.firstWhere((al) => al.product == line.product, orElse: () => InvoiceLine());
-              stockDispo += ancienneLigne.quantite;
-            }
-            if (line.quantite > stockDispo) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.red, content: Text("Stock insuffisant pour ${line.product!.designation}")));
-              return;
-            }
+        for (var line in l) { if (line.product != null) {
+          double stockDispo = line.product!.stock;
+          if (widget.invoiceToEdit != null) {
+            var al = widget.invoiceToEdit!.lignes.firstWhere((al) => al.product == line.product, orElse: () => InvoiceLine());
+            stockDispo += al.quantite;
           }
+          if (line.quantite > stockDispo) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.red, content: Text("Stock insuffisant pour ${line.product!.designation}"))); return; }
+        }
         }
       }
       setState(() {
@@ -453,7 +469,7 @@ class _ILRState extends State<InvoiceLineRow> {
   );
 }
 
-// --- 11. CRÉATIONS ---
+// --- 10. CRÉATIONS ARTICLES / TIERS ---
 class CreateArticleScreen extends StatefulWidget { final Product? productToEdit; CreateArticleScreen({this.productToEdit, super.key}); @override State<CreateArticleScreen> createState() => _CASState(); }
 class _CASState extends State<CreateArticleScreen> {
   late TextEditingController d, pa, pv, st; CompteComptable? s;
@@ -468,9 +484,15 @@ class _CTSState extends State<CreateTiersScreen> {
   @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: Text(widget.tiersToEdit == null ? "Nouveau Tiers" : "Modifier Tiers")), body: SingleChildScrollView(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_sectionHeader(Icons.person, "Identité"), TextField(controller: n, decoration: const InputDecoration(labelText: "Nom / Compte Tiers")), DropdownButtonFormField<CompteComptable>(value: s, items: globalPlanComptable.where((e)=>e.nature=="Tiers").map((e) => DropdownMenuItem(value: e, child: Text(e.toString()))).toList(), onChanged: (v) => s = v, decoration: const InputDecoration(labelText: "Compte Collectif")), TextField(controller: a, decoration: const InputDecoration(labelText: "Adresse")), TextField(controller: t, decoration: const InputDecoration(labelText: "Téléphone"), keyboardType: TextInputType.phone), _roundedButton("VALIDER", () { if (widget.tiersToEdit != null) { widget.tiersToEdit!.compteTiers = n.text; widget.tiersToEdit!.adresse = a.text; widget.tiersToEdit!.telephone = t.text; widget.tiersToEdit!.compteCollectif = s; } else { globalTiers.add(Tiers(compteTiers: n.text, intitule: n.text, adresse: a.text, telephone: t.text, isClient: widget.isClient, compteCollectif: s)); } Navigator.pop(context); }, isFullWidth: true)])));
 }
 
+// --- 11. PDF & STUBS ---
 Future<void> _printProfessionalInvoice(BuildContext ctx, Invoice inv) async {
-  final pdf = pw.Document(); pdf.addPage(pw.Page(build: (c) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [pw.Text("SANOGO & FRÈRE", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)), pw.SizedBox(height: 20), pw.Text("Document N° : ${inv.numero}"), pw.Text("Tiers : ${inv.client.compteTiers}"), pw.SizedBox(height: 20), pw.TableHelper.fromTextArray(headerDecoration: const pw.BoxDecoration(color: PdfColors.grey100), headers: ['Désignation', 'Qté', 'PU', 'Montant'], data: inv.lignes.map((l) => [l.product?.designation ?? "", l.quantite, formatPrice(l.prixUnitaire), formatPrice(l.montantHT)]).toList()), pw.SizedBox(height: 10), if(inv.fraisTransport > 0) pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text("Frais Transport : - ${formatPrice(inv.fraisTransport)}", style: pw.TextStyle(color: PdfColors.red))), pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text("TOTAL NET : ${formatPrice(inv.netAPayer)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)))])));
-  await Printing.layoutPdf(onLayout: (f) async => pdf.save());
+  final pdf = pw.Document(); pdf.addPage(pw.Page(build: (c) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+    pw.Text("SANOGO & FRÈRE", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+    pw.SizedBox(height: 20), pw.Text("Document N° : ${inv.numero}"), pw.Text("Tiers : ${inv.client.compteTiers}"),
+    pw.SizedBox(height: 20), pw.TableHelper.fromTextArray(headerDecoration: const pw.BoxDecoration(color: PdfColors.grey100), headers: ['Désignation', 'Qté', 'PU', 'Montant'], data: inv.lignes.map((l) => [l.product?.designation ?? "", l.quantite, formatPrice(l.prixUnitaire), formatPrice(l.montantHT)]).toList()),
+    pw.SizedBox(height: 10), if(inv.fraisTransport > 0) pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text("Frais Transport : - ${formatPrice(inv.fraisTransport)}", style: pw.TextStyle(color: PdfColors.red))),
+    pw.SizedBox(height: 10), pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text("TOTAL NET : ${formatPrice(inv.netAPayer)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+  ]))); await Printing.layoutPdf(onLayout: (f) async => pdf.save());
 }
 
 Widget _sectionHeader(IconData i, String t) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(children: [Icon(i, color: const Color(0xFF1A237E), size: 20), const SizedBox(width: 8), Text(t, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E)))]));
